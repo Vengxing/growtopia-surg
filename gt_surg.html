@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Growtopia Surgery Tool Autoclave Calculator with Profit Analysis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+        .section {
+            background-color: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .bought-packs {
+            display: grid;
+            grid-template-columns: auto auto;
+            gap: 10px;
+            align-items: center;
+        }
+        .bought-packs label {
+            text-align: right;
+        }
+        .tool-header, .tool {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 2fr;
+            gap: 10px;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .tool-header {
+            font-weight: bold;
+            background-color: #f5f5f5;
+        }
+        input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            margin: 0;
+        }
+        button {
+            padding: 5px 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .button-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+        #clearAll, #autoCalculate, #importPacks, #calculateProfit {
+            display: inline-block;
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        #clearAll { background-color: #f44336; }
+        #clearAll:hover { background-color: #d32f2f; }
+        #autoCalculate { background-color: #2196F3; }
+        #autoCalculate:hover { background-color: #1976D2; }
+        #importPacks { background-color: #FF9800; }
+        #importPacks:hover { background-color: #F57C00; }
+        #calculateProfit { background-color: #9C27B0; }
+        #calculateProfit:hover { background-color: #7B1FA2; }
+        #profitResults {
+            margin-top: 20px;
+        }
+        .profit { color: green; }
+        .loss { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Growtopia Surgery Tool Autoclave Calculator with Profit Analysis</h1>
+    
+    <div class="section">
+        <h2>Bought Packs</h2>
+        <div class="bought-packs">
+            <label for="msurgPack">MSurg:</label>
+            <input type="number" id="msurgPack" value="0" min="0">
+            <label for="msurgPrice">Each MSurg Price (wls):</label>
+            <input type="number" id="msurgPrice" value="0" min="0" step="0.01">
+            <label for="surgPack">Surg:</label>
+            <input type="number" id="surgPack" value="0" min="0">
+            <label for="surgPrice">Each Surg Price (wls):</label>
+            <input type="number" id="surgPrice" value="0" min="0" step="0.01">
+        </div>
+        <div class="button-container">
+            <button id="importPacks">Import Packs</button>
+        </div>
+    </div>
+
+    <div id="tools" class="section">
+        <div class="tool-header">
+            <div>Tool Name</div>
+            <div>Amount</div>
+            <div>Autoclave</div>
+            <div>Include</div>
+            <div>Sale Price (amount/wls)</div>
+        </div>
+    </div>
+
+    <div class="button-container">
+        <button id="autoCalculate">Auto Calculate</button>
+        <button id="calculateProfit">Calculate Profit</button>
+        <button id="clearAll">Clear All</button>
+    </div>
+
+    <div id="profitResults" class="section"></div>
+
+    <script>
+        const tools = [
+            "anesthetic", "antiseptic", "antibiotic", "clamp", "defibrillator",
+            "lab kit", "pins", "scalpel", "splint", "sponge", "stitches",
+            "transfusion", "ultrasound", "Surg-E"
+        ];
+
+        const toolsContainer = document.getElementById('tools');
+
+        tools.forEach(tool => {
+            const toolDiv = document.createElement('div');
+            toolDiv.className = 'tool';
+            toolDiv.innerHTML = `
+                <div>${tool}</div>
+                <input type="number" id="${tool}" min="0" value="0">
+                ${tool !== 'Surg-E' ? `<button onclick="autoclave('${tool}')">Autoclave</button>` : '<div></div>'}
+                ${tool !== 'Surg-E' ? `<input type="checkbox" id="check_${tool}" ${tool !== 'stitches' ? 'checked' : ''} onchange="validateCheckboxes(this)">` : '<div></div>'}
+                <div>
+                    <input type="number" id="${tool}_amount" value="${getDefaultAmount(tool)}" min="0"> / 
+                    <input type="number" id="${tool}_wls" value="${getDefaultWls(tool)}" min="0" step="0.01">
+                </div>
+            `;
+            toolsContainer.appendChild(toolDiv);
+        });
+
+        function getDefaultAmount(tool) {
+            if (tool === 'stitches') return '200';
+            if (tool === 'Surg-E') return '4';
+            if (tool === 'antibiotic' || tool === 'scalpel') return '13';
+            return '15';
+        }
+
+        function getDefaultWls(tool) {
+            if (tool === 'stitches') return '135';
+            return '1';
+        }
+
+        function validateCheckboxes(checkbox) {
+            const checkedBoxes = document.querySelectorAll('input[type="checkbox"]:checked');
+            if (checkedBoxes.length === tools.length - 1) {  // -1 for Surg-E
+                checkbox.checked = false;
+            }
+        }
+
+        function autoclave(tool) {
+            const inputElement = document.getElementById(tool);
+            let amount = parseInt(inputElement.value);
+            
+            if (isNaN(amount) || amount < 0) {
+                alert("Please enter a valid positive number.");
+                inputElement.value = 0;
+                return;
+            }
+
+            const timesToDeduct = Math.floor(amount / 20);
+            if (timesToDeduct > 0) {
+                tools.forEach(otherTool => {
+                    if (otherTool !== tool && otherTool !== 'Surg-E') {
+                        const otherInput = document.getElementById(otherTool);
+                        otherInput.value = parseInt(otherInput.value) + timesToDeduct;
+                    }
+                });
+                inputElement.value = amount % 20;
+            }
+        }
+
+        function autoCalculate() {
+            let continueCalculating = true;
+            while (continueCalculating) {
+                continueCalculating = false;
+                tools.forEach(tool => {
+                    if (tool !== 'Surg-E') {
+                        const checkbox = document.getElementById(`check_${tool}`);
+                        if (checkbox.checked) {
+                            const inputElement = document.getElementById(tool);
+                            let amount = parseInt(inputElement.value);
+                            if (amount >= 20) {
+                                autoclave(tool);
+                                continueCalculating = true;
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function importPacks() {
+            const msurgPacks = parseInt(document.getElementById('msurgPack').value) || 0;
+            const surgPacks = parseInt(document.getElementById('surgPack').value) || 0;
+
+            tools.forEach(tool => {
+                const inputElement = document.getElementById(tool);
+                let currentAmount = parseInt(inputElement.value) || 0;
+                if (tool === 'Surg-E') {
+                    currentAmount += msurgPacks * 5 + surgPacks * 1;
+                } else {
+                    currentAmount += msurgPacks * 20 + surgPacks * 5;
+                }
+                inputElement.value = currentAmount;
+            });
+        }
+
+        function calculateProfit() {
+            let profitAmount = 0;
+            let amountSpent = 0;
+            let results = '<h3>Profit Breakdown:</h3>';
+
+            tools.forEach(tool => {
+                const amount = parseInt(document.getElementById(tool).value) || 0;
+                const saleAmount = parseFloat(document.getElementById(`${tool}_amount`).value) || 0;
+                const saleWls = parseFloat(document.getElementById(`${tool}_wls`).value) || 0;
+
+                const wlsPerTool = saleWls / saleAmount;
+                const wlsEarned = amount * wlsPerTool;
+
+                profitAmount += wlsEarned;
+                results += `${tool}: ${wlsEarned.toFixed(2)} wls<br>`;
+            });
+
+            const msurgPacks = parseInt(document.getElementById('msurgPack').value) || 0;
+            const surgPacks = parseInt(document.getElementById('surgPack').value) || 0;
+            const msurgPrice = parseFloat(document.getElementById('msurgPrice').value) || 0;
+            const surgPrice = parseFloat(document.getElementById('surgPrice').value) || 0;
+
+            amountSpent = (msurgPacks * msurgPrice) + (surgPacks * surgPrice);
+
+            const pureProfit = profitAmount - amountSpent;
+
+            results += `<br><strong>Profit Amount:</strong> ${profitAmount.toFixed(2)} wls<br>`;
+            results += `<strong>Amount Spent:</strong> ${amountSpent.toFixed(2)} wls<br>`;
+            results += pureProfit >= 0 
+                ? `<strong class="profit">Pure Profit: ${pureProfit.toFixed(2)} wls</strong>` 
+                : `<strong class="loss">Profit Loss: ${Math.abs(pureProfit).toFixed(2)} wls</strong>`;
+
+            document.getElementById('profitResults').innerHTML = results;
+        }
+
+        document.getElementById('clearAll').addEventListener('click', () => {
+            tools.forEach(tool => {
+                document.getElementById(tool).value = 0;
+            });
+            document.getElementById('msurgPack').value = 0;
+            document.getElementById('surgPack').value = 0;
+            document.getElementById('msurgPrice').value = 0;
+            document.getElementById('surgPrice').value = 0;
+            document.getElementById('profitResults').innerHTML = '';
+        });
+
+        document.getElementById('autoCalculate').addEventListener('click', autoCalculate);
+        document.getElementById('importPacks').addEventListener('click', importPacks);
+        document.getElementById('calculateProfit').addEventListener('click', calculateProfit);
+    </script>
+</body>
+</html>
