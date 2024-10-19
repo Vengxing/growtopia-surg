@@ -44,6 +44,15 @@
             font-weight: bold;
             background-color: #f5f5f5;
         }
+        .price-adjust-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+        }
+        .price-adjust-buttons button {
+            padding: 2px 5px;
+            font-size: 12px;
+        }
         input[type="number"] {
             width: 60px;
             padding: 5px;
@@ -87,47 +96,49 @@
 </head>
 <body>
     <h1>Growtopia Surgery Tool Autoclave Calculator with Profit Analysis</h1>
-    
     <div class="section">
         <h2>Bought Packs</h2>
         <div class="bought-packs">
             <label for="msurgPack">MSurg:</label>
-            <input type="number" id="msurgPack" value="0" min="0">
+            <input type="number" id="msurgPack" placeholder="Enter number of MSurg packs" value="0" min="0">
             <label for="msurgPrice">Each MSurg Price (wls):</label>
-            <input type="number" id="msurgPrice" value="0" min="0" step="0.01">
+            <input type="number" id="msurgPrice" placeholder="Enter price per MSurg pack in wls" value="0" min="0" step="0.01">
             <label for="surgPack">Surg:</label>
-            <input type="number" id="surgPack" value="0" min="0">
+            <input type="number" id="surgPack" placeholder="Enter number of Surg packs" value="0" min="0">
             <label for="surgPrice">Each Surg Price (wls):</label>
-            <input type="number" id="surgPrice" value="0" min="0" step="0.01">
+            <input type="number" id="surgPrice" placeholder="Enter price per Surg pack in wls" value="0" min="0" step="0.01">
         </div>
         <div class="button-container">
             <button id="importPacks">Import Packs</button>
         </div>
     </div>
-
     <div id="tools" class="section">
         <div class="tool-header">
             <div>Tool Name</div>
             <div>Amount</div>
             <div>Autoclave</div>
             <div>Include</div>
-            <div>Sale Price (amount/wls)</div>
+            <div>
+                Sale Price (amount/wls)
+                <div class="price-adjust-buttons">
+                    <button id="decreasePrice">-</button>
+                    <button id="increasePrice">+</button>
+                </div>
+            </div>
         </div>
     </div>
-
     <div class="button-container">
         <button id="autoCalculate">Auto Calculate</button>
         <button id="calculateProfit">Calculate Profit</button>
         <button id="clearAll">Clear All</button>
     </div>
-
     <div id="profitResults" class="section"></div>
 
     <script>
         const tools = [
-            "anesthetic", "antiseptic", "antibiotic", "clamp", "defibrillator",
-            "lab kit", "pins", "scalpel", "splint", "sponge", "stitches",
-            "transfusion", "ultrasound", "Surg-E"
+            "Anesthetic", "Antiseptic", "Antibiotic", "Clamp", "Defibrillator",
+            "Lab kit", "Pins", "Scalpel", "Splint", "Sponge", "Stitches",
+            "Transfusion", "Ultrasound", "Surg-E"
         ];
 
         const toolsContainer = document.getElementById('tools');
@@ -139,7 +150,7 @@
                 <div>${tool}</div>
                 <input type="number" id="${tool}" min="0" value="0">
                 ${tool !== 'Surg-E' ? `<button onclick="autoclave('${tool}')">Autoclave</button>` : '<div></div>'}
-                ${tool !== 'Surg-E' ? `<input type="checkbox" id="check_${tool}" ${tool !== 'stitches' ? 'checked' : ''} onchange="validateCheckboxes(this)">` : '<div></div>'}
+                ${tool !== 'Surg-E' ? `<input type="checkbox" id="check_${tool}" ${tool !== 'Stitches' ? 'checked' : ''} onchange="validateCheckboxes(this)">` : '<div></div>'}
                 <div>
                     <input type="number" id="${tool}_amount" value="${getDefaultAmount(tool)}" min="0"> / 
                     <input type="number" id="${tool}_wls" value="${getDefaultWls(tool)}" min="0" step="0.01">
@@ -149,14 +160,14 @@
         });
 
         function getDefaultAmount(tool) {
-            if (tool === 'stitches') return '200';
+            if (tool === 'Stitches') return '200';
             if (tool === 'Surg-E') return '4';
-            if (tool === 'antibiotic' || tool === 'scalpel') return '13';
+            if (tool === 'Antibiotic' || tool === 'Scalpel') return '13';
             return '15';
         }
 
         function getDefaultWls(tool) {
-            if (tool === 'stitches') return '135';
+            if (tool === 'Stitches') return '135';
             return '1';
         }
 
@@ -271,6 +282,23 @@
             document.getElementById('profitResults').innerHTML = '';
         });
 
+        function adjustPrices(increment) {
+            tools.forEach(tool => {
+                if (tool !== 'Stitches' && tool !== 'Surg-E') {
+                    const amountInput = document.getElementById(`${tool}_amount`);
+                    let amount = parseInt(amountInput.value);
+                    if (!isNaN(amount)) {
+                        amount += increment;
+                        if (amount > 0) {
+                            amountInput.value = amount;
+                        }
+                    }
+                }
+            });
+        }
+
+        document.getElementById('increasePrice').addEventListener('click', () => adjustPrices(1));
+        document.getElementById('decreasePrice').addEventListener('click', () => adjustPrices(-1));
         document.getElementById('autoCalculate').addEventListener('click', autoCalculate);
         document.getElementById('importPacks').addEventListener('click', importPacks);
         document.getElementById('calculateProfit').addEventListener('click', calculateProfit);
